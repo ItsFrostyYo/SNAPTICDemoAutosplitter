@@ -13,6 +13,8 @@ Godot state directly from memory.
 5. Open **Layout Settings** and select the autosplitter tab to configure it.
 
 ## Features
+All Features are Based off of the Leaderboard Rules from https://www.speedrun.com/snaptic
+
 
 - Starts after the second opening cutscene finishes or is skipped and the
   player gains control.

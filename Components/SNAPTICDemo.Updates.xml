@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<updates>
+  <update version="1.0.0.4">
+    <files>
+      <file path="Components/LiveSplit.SNAPTICDemo.dll" status="changed"/>
+    </files>
+    <changelog>
+      <change>First Release Version with Start, Reset and End Split</change>
+    </changelog>
+  </update>
+</updates>

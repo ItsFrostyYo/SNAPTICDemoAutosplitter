@@ -11,8 +11,8 @@ namespace LiveSplit.SNAPTICDemo
         public string Description => "Starts after the second opening cutscene and optionally resets on the main menu.";
         public ComponentCategory Category => ComponentCategory.Control;
         public string UpdateName => ComponentName;
-        public string UpdateURL => string.Empty;
-        public string XMLURL => string.Empty;
+        public string UpdateURL => "https://raw.githubusercontent.com/ItsFrostyYo/SNAPTICDemoAutosplitter/main/";
+        public string XMLURL => UpdateURL + "Components/SNAPTICDemo.Updates.xml";
         public Version Version => Assembly.GetExecutingAssembly().GetName().Version;
 
         public IComponent Create(LiveSplitState state) => new SNAPTICDemoComponent(state);
