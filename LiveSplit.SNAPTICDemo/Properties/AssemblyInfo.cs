@@ -4,7 +4,7 @@ using System.Reflection;
 using System.Runtime.InteropServices;
 
 [assembly: AssemblyTitle("LiveSplit.SNAPTICDemo")]
-[assembly: AssemblyDescription("Autosplitter for SNAPTIC Demo")]
+[assembly: AssemblyDescription("A LiveSplit autosplitter component for SNAPTIC Demo that reads the games Godot state directly from memory and provides Automatic Start, Reset and Splits.")]
 [assembly: AssemblyCompany("")]
 [assembly: AssemblyProduct("LiveSplit.SNAPTICDemo")]
 [assembly: AssemblyCopyright("Copyright © Kaleb Austin 2026")]
