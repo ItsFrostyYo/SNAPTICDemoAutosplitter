@@ -1,0 +1,10 @@
+*
+!/.gitignore
+!/LICENSE
+!/README.md
+!/LiveSplit.SNAPTICDemo/
+!/LiveSplit.SNAPTICDemo/**
+/LiveSplit.SNAPTICDemo/bin/
+/LiveSplit.SNAPTICDemo/obj/
+!/Components/
+!/Components/**
