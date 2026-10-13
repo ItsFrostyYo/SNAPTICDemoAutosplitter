@@ -50,6 +50,7 @@ namespace LiveSplit.SNAPTICDemo
         private bool disposed;
         private bool wasInEndRegion;
         private bool hadValidPlayerBody;
+        private bool endSplitTrackingEnabled = true;
 
         public void Update()
         {
@@ -150,6 +151,20 @@ namespace LiveSplit.SNAPTICDemo
             return result;
         }
 
+        public void SetEndSplitTrackingEnabled(bool enabled)
+        {
+            if (endSplitTrackingEnabled == enabled)
+                return;
+
+            endSplitTrackingEnabled = enabled;
+            endSplitSignal = false;
+            previousPlayerPosition = null;
+            wasInEndRegion = false;
+
+            SNAPTICDemoLog.Write(
+                "End Split position tracking " + (enabled ? "enabled." : "disabled for the completed run."));
+        }
+
         private bool IsProcessAlive()
         {
             try
@@ -238,6 +253,9 @@ namespace LiveSplit.SNAPTICDemo
 
         private void UpdateEndSplit()
         {
+            if (!endSplitTrackingEnabled)
+                return;
+
             if (playerMembers == IntPtr.Zero)
             {
                 playerMembers = ResolvePlayerMembers();
@@ -280,11 +298,14 @@ namespace LiveSplit.SNAPTICDemo
                 SNAPTICDemoLog.Write("Player current_body resolved at 0x" + bodyObject.ToString("X") + ".");
             hadValidPlayerBody = true;
             Position currentPosition;
-            if (!TryReadPosition(
-                    new IntPtr(bodyObject + Node3DGlobalPositionOffset),
-                    out currentPosition))
+            IntPtr positionAddress = new IntPtr(bodyObject + Node3DGlobalPositionOffset);
+            if (!TryReadPosition(positionAddress, out currentPosition))
             {
-                SNAPTICDemoLog.Write("WARNING: Failed to read a plausible Player global position.");
+                SNAPTICDemoLog.Write(
+                    "WARNING: Failed to read a plausible Player global position. " +
+                    "BodyObject=0x" + bodyObject.ToString("X") +
+                    ", PositionAddress=0x" + positionAddress.ToInt64().ToString("X") +
+                    ", Node3DGlobalPositionOffset=0x" + Node3DGlobalPositionOffset.ToString("X") + ".");
                 previousPlayerPosition = null;
                 wasInEndRegion = false;
                 return;
@@ -319,7 +340,10 @@ namespace LiveSplit.SNAPTICDemo
                     FormatPosition(currentPosition) + ".");
             }
 
-            if (inEndRegion || crossedEndRegion)
+            bool enteredEndRegion = inEndRegion && !wasInEndRegion;
+            bool crossedEntireRegion = !inEndRegion && !wasInEndRegion && crossedEndRegion;
+
+            if (enteredEndRegion || crossedEntireRegion)
             {
                 if (!endSplitSignal)
                     SNAPTICDemoLog.Write("END SPLIT signal latched by position/contact detection.");

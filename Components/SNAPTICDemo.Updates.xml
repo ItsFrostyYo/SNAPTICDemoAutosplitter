@@ -1,5 +1,15 @@
 ﻿<?xml version="1.0" encoding="utf-8" ?>
 <updates>
+  <update version="1.0.0.6">
+    <files>
+      <file path="Components/LiveSplit.SNAPTICDemo.dll" status="changed"/>
+    </files>
+    <changelog>
+      <change>Prevent repeated End Split signal/log spam after entering the finish region</change>
+      <change>Disable End Split position tracking after LiveSplit confirms the final split, then re-enable it for the next run</change>
+      <change>Add body pointer, position address, and Godot Node3D offset to coordinate-read failure diagnostics</change>
+    </changelog>
+  </update>
   <update version="1.0.0.5">
     <files>
       <file path="Components/LiveSplit.SNAPTICDemo.dll" status="changed"/>

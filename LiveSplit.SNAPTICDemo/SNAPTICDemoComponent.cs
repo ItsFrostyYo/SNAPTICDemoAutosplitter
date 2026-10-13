@@ -68,6 +68,7 @@ namespace LiveSplit.SNAPTICDemo
 
             if (state.CurrentPhase == TimerPhase.NotRunning)
             {
+                memory.SetEndSplitTrackingEnabled(true);
                 endSplitCompleted = false;
                 guardedAttemptCount = -1;
                 guardedSplitIndex = -1;
@@ -92,6 +93,7 @@ namespace LiveSplit.SNAPTICDemo
                  state.CurrentPhase == TimerPhase.Paused ||
                  state.CurrentPhase == TimerPhase.Ended))
             {
+                memory.SetEndSplitTrackingEnabled(true);
                 endSplitCompleted = false;
                 guardedAttemptCount = -1;
                 guardedSplitIndex = -1;
@@ -130,12 +132,12 @@ namespace LiveSplit.SNAPTICDemo
                 timer.Split();
 
                 // TimerModel.Split is synchronous. Only arm the guard after
-                // LiveSplit actually advances or finishes; otherwise the
-                // latched contact remains eligible to retry on the next update.
+                // LiveSplit actually advances or finishes.
                 endSplitCompleted = state.CurrentSplitIndex != previousSplitIndex ||
                     state.CurrentPhase != previousPhase;
                 if (endSplitCompleted)
                 {
+                    memory.SetEndSplitTrackingEnabled(false);
                     guardedAttemptCount = state.Run?.AttemptCount ?? -1;
                     guardedSplitIndex = state.CurrentSplitIndex;
                     SNAPTICDemoLog.Write(
@@ -148,7 +150,7 @@ namespace LiveSplit.SNAPTICDemo
                     SNAPTICDemoLog.Write(
                         "WARNING: TimerModel.Split() returned without LiveSplit advancing. " +
                         "TimerPhase=" + state.CurrentPhase +
-                        ", CurrentSplitIndex=" + state.CurrentSplitIndex + ". Will retry if contact remains active.");
+                        ", CurrentSplitIndex=" + state.CurrentSplitIndex + ". Waiting for another End Split entry/crossing event.");
                 }
             }
         }
