@@ -1,5 +1,14 @@
-<?xml version="1.0" encoding="utf-8" ?>
+﻿<?xml version="1.0" encoding="utf-8" ?>
 <updates>
+  <update version="1.0.0.5">
+    <files>
+      <file path="Components/LiveSplit.SNAPTICDemo.dll" status="changed"/>
+    </files>
+    <changelog>
+      <change>Add diagnostic log file for startup, memory scanning, settings, and End Split troubleshooting</change>
+      <change>Log End Split player coordinates, region detection, signal state, and LiveSplit split result</change>
+    </changelog>
+  </update>
   <update version="1.0.0.4">
     <files>
       <file path="Components/LiveSplit.SNAPTICDemo.dll" status="changed"/>

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
@@ -48,6 +48,8 @@ namespace LiveSplit.SNAPTICDemo
         private bool endSplitSignal;
         private bool resetSignal;
         private bool disposed;
+        private bool wasInEndRegion;
+        private bool hadValidPlayerBody;
 
         public void Update()
         {
@@ -72,6 +74,7 @@ namespace LiveSplit.SNAPTICDemo
             if (!TryReadInt64(IntPtr.Add(levelLoaderMembers, 0xE0), out currentLevel) ||
                 currentLevel < 0 || currentLevel > 7)
             {
+                SNAPTICDemoLog.Write("LevelLoader pointer became invalid; clearing cached pointers and rescanning.");
                 levelLoaderMembers = IntPtr.Zero;
                 previousLevel = null;
                 cutsceneStarterMembers = IntPtr.Zero;
@@ -81,8 +84,16 @@ namespace LiveSplit.SNAPTICDemo
                 return;
             }
 
+            if (!previousLevel.HasValue || previousLevel.Value != currentLevel)
+                SNAPTICDemoLog.Write("Level changed: " +
+                    (previousLevel.HasValue ? previousLevel.Value.ToString() : "<unknown>") +
+                    " -> " + currentLevel + ".");
+
             if (previousLevel.HasValue && previousLevel.Value != 0 && currentLevel == 0)
+            {
                 resetSignal = true;
+                SNAPTICDemoLog.Write("Main-menu transition detected; RESET signal latched.");
+            }
             previousLevel = currentLevel;
 
             if (currentLevel != 5)
@@ -113,6 +124,8 @@ namespace LiveSplit.SNAPTICDemo
 
             long requestObject = BitConverter.ToInt64(starter, 0xE8);
             startSignal = cutsceneRequestWasActive && requestObject == 0;
+            if (startSignal)
+                SNAPTICDemoLog.Write("Opening cutscene request ended; START signal latched.");
             cutsceneRequestWasActive = requestObject != 0;
         }
 
@@ -169,7 +182,7 @@ namespace LiveSplit.SNAPTICDemo
                     process = candidate;
                     previousLevel = null;
                     nextScanAttempt = DateTime.UtcNow;
-                    Trace.WriteLine("SNAPTIC Demo autosplitter attached to PID " + candidate.Id + ".");
+                    SNAPTICDemoLog.Write("Attached to snaptic.exe PID " + candidate.Id + ".");
                     return;
                 }
                 catch
@@ -193,14 +206,14 @@ namespace LiveSplit.SNAPTICDemo
                 {
                     levelLoaderMembers = levelScanTask.Result;
                     if (levelLoaderMembers != IntPtr.Zero)
-                        Trace.WriteLine("SNAPTIC LevelLoader members found at 0x" +
+                        SNAPTICDemoLog.Write("LevelLoader members found at 0x" +
                             levelLoaderMembers.ToInt64().ToString("X") + ".");
                     else
                         nextScanAttempt = DateTime.UtcNow.AddSeconds(1);
                 }
                 catch (Exception exception)
                 {
-                    Trace.WriteLine("SNAPTIC LevelLoader scan failed: " + exception.Message);
+                    SNAPTICDemoLog.Write("ERROR: LevelLoader scan failed: " + exception + ".");
                     nextScanAttempt = DateTime.UtcNow.AddSeconds(1);
                 }
                 finally
@@ -238,7 +251,7 @@ namespace LiveSplit.SNAPTICDemo
                 {
                     StopPlayerScan();
                 }
-                Trace.WriteLine("SNAPTIC Player members found at 0x" +
+                SNAPTICDemoLog.Write("Player members found at 0x" +
                     playerMembers.ToInt64().ToString("X") + ".");
             }
 
@@ -246,6 +259,7 @@ namespace LiveSplit.SNAPTICDemo
             if (!TryReadBlock(playerMembers, PlayerRecordSize, out player) ||
                 !IsPlayerMembers(player, 0))
             {
+                SNAPTICDemoLog.Write("Player member pointer became invalid; clearing player tracking and resolving again.");
                 ClearPlayerTracking();
                 return;
             }
@@ -255,15 +269,24 @@ namespace LiveSplit.SNAPTICDemo
                 PlayerCurrentBodyMember * VariantSize + 16);
             if (!IsPlausiblePointer(bodyObject))
             {
+                if (hadValidPlayerBody)
+                    SNAPTICDemoLog.Write("Player current_body is no longer a valid object pointer.");
+                hadValidPlayerBody = false;
                 previousPlayerPosition = null;
+                wasInEndRegion = false;
                 return;
             }
+            if (!hadValidPlayerBody)
+                SNAPTICDemoLog.Write("Player current_body resolved at 0x" + bodyObject.ToString("X") + ".");
+            hadValidPlayerBody = true;
             Position currentPosition;
             if (!TryReadPosition(
                     new IntPtr(bodyObject + Node3DGlobalPositionOffset),
                     out currentPosition))
             {
+                SNAPTICDemoLog.Write("WARNING: Failed to read a plausible Player global position.");
                 previousPlayerPosition = null;
+                wasInEndRegion = false;
                 return;
             }
 
@@ -276,9 +299,34 @@ namespace LiveSplit.SNAPTICDemo
                  SegmentIntersectsSkyPotBounds(
                     previousPlayerPosition.Value,
                     currentPosition));
-            if (inEndRegion || crossedEndRegion)
-                endSplitSignal = true;
+            if (inEndRegion && !wasInEndRegion)
+            {
+                SNAPTICDemoLog.Write(
+                    "Player entered End Split region at " + FormatPosition(currentPosition) + ". " +
+                    "UpperPlatform=" + IsInUpperPlatformBounds(currentPosition) +
+                    ", SkyPot=" + IsInSkyPotBounds(currentPosition) + ".");
+            }
+            else if (!inEndRegion && wasInEndRegion)
+            {
+                SNAPTICDemoLog.Write("Player left End Split region at " + FormatPosition(currentPosition) + ".");
+            }
 
+            if (crossedEndRegion && !inEndRegion)
+            {
+                SNAPTICDemoLog.Write(
+                    "Player movement segment crossed End Split region between " +
+                    FormatPosition(previousPlayerPosition.Value) + " and " +
+                    FormatPosition(currentPosition) + ".");
+            }
+
+            if (inEndRegion || crossedEndRegion)
+            {
+                if (!endSplitSignal)
+                    SNAPTICDemoLog.Write("END SPLIT signal latched by position/contact detection.");
+                endSplitSignal = true;
+            }
+
+            wasInEndRegion = inEndRegion;
             previousPlayerPosition = currentPosition;
         }
 
@@ -300,7 +348,7 @@ namespace LiveSplit.SNAPTICDemo
                 }
                 catch (Exception exception)
                 {
-                    Trace.WriteLine("SNAPTIC Player scan failed: " + exception.Message);
+                    SNAPTICDemoLog.Write("ERROR: Player scan failed: " + exception + ".");
                     nextPlayerScanAttempt = DateTime.UtcNow.AddSeconds(1);
                 }
                 finally
@@ -322,8 +370,7 @@ namespace LiveSplit.SNAPTICDemo
             playerScanTask = Task.Run(
                 () => FindPlayer(attachedProcess, token, addressHint),
                 token);
-            Trace.WriteLine("SNAPTIC Player reference was not cached by the level; " +
-                "started fallback memory scan.");
+            SNAPTICDemoLog.Write("Player reference was not cached by the level; started fallback memory scan.");
         }
 
         private IntPtr ResolveMainCutsceneStarter()
@@ -577,6 +624,8 @@ namespace LiveSplit.SNAPTICDemo
             playerMembers = IntPtr.Zero;
             previousPlayerPosition = null;
             endSplitSignal = false;
+            wasInEndRegion = false;
+            hadValidPlayerBody = false;
         }
 
         private void StopPlayerScan()
@@ -886,8 +935,12 @@ namespace LiveSplit.SNAPTICDemo
 
             if (process != null)
             {
+                int processId = -1;
+                try { processId = process.Id; } catch { }
                 process.Dispose();
                 process = null;
+                SNAPTICDemoLog.Write("Detached from snaptic.exe" +
+                    (processId >= 0 ? " PID " + processId : string.Empty) + ".");
             }
         }
 
@@ -897,6 +950,14 @@ namespace LiveSplit.SNAPTICDemo
                 return;
             disposed = true;
             Detach();
+        }
+
+        private static string FormatPosition(Position position)
+        {
+            return "(" +
+                position.X.ToString("0.000") + ", " +
+                position.Y.ToString("0.000") + ", " +
+                position.Z.ToString("0.000") + ")";
         }
 
         private struct Position

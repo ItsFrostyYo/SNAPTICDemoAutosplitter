@@ -1,4 +1,4 @@
-using LiveSplit.SNAPTICDemo;
+﻿using LiveSplit.SNAPTICDemo;
 using LiveSplit.UI.Components;
 using System.Reflection;
 using System.Runtime.InteropServices;
@@ -10,6 +10,6 @@ using System.Runtime.InteropServices;
 [assembly: AssemblyCopyright("Copyright © Kaleb Austin 2026")]
 [assembly: ComVisible(false)]
 [assembly: Guid("51fb77c2-92f0-427a-9855-b3db3fa47d3a")]
-[assembly: AssemblyVersion("1.0.0.4")]
-[assembly: AssemblyFileVersion("1.0.0.4")]
+[assembly: AssemblyVersion("1.0.0.5")]
+[assembly: AssemblyFileVersion("1.0.0.5")]
 [assembly: ComponentFactory(typeof(SNAPTICDemoFactory))]

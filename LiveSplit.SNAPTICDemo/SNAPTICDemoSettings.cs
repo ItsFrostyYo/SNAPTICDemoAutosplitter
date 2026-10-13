@@ -1,4 +1,4 @@
-using System.Drawing;
+﻿using System.Drawing;
 using System.Windows.Forms;
 using System.Xml;
 
@@ -31,7 +31,17 @@ namespace LiveSplit.SNAPTICDemo
             endSplitCheckBox = CreateCheckBox("End Split", 56);
             endSplitCheckBox.Location = new Point(30, 56);
             resetCheckBox = CreateCheckBox("Reset", 79);
-            splitCheckBox.CheckedChanged += (sender, args) => UpdateSplitOptions();
+            splitCheckBox.CheckedChanged += (sender, args) =>
+            {
+                UpdateSplitOptions();
+                SNAPTICDemoLog.Write("Setting changed: Split=" + splitCheckBox.Checked + ".");
+            };
+            startCheckBox.CheckedChanged += (sender, args) =>
+                SNAPTICDemoLog.Write("Setting changed: Start=" + startCheckBox.Checked + ".");
+            endSplitCheckBox.CheckedChanged += (sender, args) =>
+                SNAPTICDemoLog.Write("Setting changed: EndSplit=" + endSplitCheckBox.Checked + ".");
+            resetCheckBox.CheckedChanged += (sender, args) =>
+                SNAPTICDemoLog.Write("Setting changed: Reset=" + resetCheckBox.Checked + ".");
 
             toolTip.SetToolTip(
                 startCheckBox,

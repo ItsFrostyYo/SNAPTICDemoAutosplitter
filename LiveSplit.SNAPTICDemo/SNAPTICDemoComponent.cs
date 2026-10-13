@@ -1,4 +1,4 @@
-using LiveSplit.Model;
+﻿using LiveSplit.Model;
 using LiveSplit.UI;
 using LiveSplit.UI.Components;
 using System;
@@ -22,6 +22,8 @@ namespace LiveSplit.SNAPTICDemo
         public SNAPTICDemoComponent(LiveSplitState state)
         {
             this.state = state;
+            SNAPTICDemoLog.Initialize();
+            SNAPTICDemoLog.Write("Component created.");
             timer = new TimerModel { CurrentState = state };
             memory = new GodotMemoryReader();
             settings = new SNAPTICDemoSettings();
@@ -29,7 +31,15 @@ namespace LiveSplit.SNAPTICDemo
 
         public override Control GetSettingsControl(LayoutMode mode) => settings;
         public override XmlNode GetSettings(XmlDocument document) => settings.GetSettings(document);
-        public override void SetSettings(XmlNode node) => settings.SetSettings(node);
+        public override void SetSettings(XmlNode node)
+        {
+            settings.SetSettings(node);
+            SNAPTICDemoLog.Write(
+                "Settings loaded: Start=" + settings.Start +
+                ", Split=" + settings.Split +
+                ", EndSplit=" + settings.EndSplit +
+                ", Reset=" + settings.Reset + ".");
+        }
 
         public override void Update(
             IInvalidator invalidator,
@@ -42,6 +52,11 @@ namespace LiveSplit.SNAPTICDemo
 
             bool start = memory.ConsumeStartSignal();
             bool reset = memory.ConsumeResetSignal();
+
+            if (start)
+                SNAPTICDemoLog.Write("Memory reader produced START signal. Timer phase=" + state.CurrentPhase + ".");
+            if (reset)
+                SNAPTICDemoLog.Write("Memory reader produced RESET signal. Timer phase=" + state.CurrentPhase + ".");
 
             int attemptCount = state.Run?.AttemptCount ?? -1;
             if (endSplitCompleted &&
@@ -57,8 +72,18 @@ namespace LiveSplit.SNAPTICDemo
                 guardedAttemptCount = -1;
                 guardedSplitIndex = -1;
                 memory.ConsumeEndSplitSignal();
-                if (settings.Start && start)
-                    timer.Start();
+                if (start)
+                {
+                    if (settings.Start)
+                    {
+                        SNAPTICDemoLog.Write("Starting LiveSplit timer.");
+                        timer.Start();
+                    }
+                    else
+                    {
+                        SNAPTICDemoLog.Write("START signal ignored because Start setting is disabled.");
+                    }
+                }
                 return;
             }
 
@@ -71,6 +96,7 @@ namespace LiveSplit.SNAPTICDemo
                 guardedAttemptCount = -1;
                 guardedSplitIndex = -1;
                 memory.ConsumeEndSplitSignal();
+                SNAPTICDemoLog.Write("Resetting LiveSplit timer from main-menu reset signal.");
                 timer.Reset();
                 return;
             }
@@ -84,12 +110,23 @@ namespace LiveSplit.SNAPTICDemo
                 return;
             }
 
+            bool endSignal = memory.ConsumeEndSplitSignal();
+            if (endSignal)
+            {
+                SNAPTICDemoLog.Write(
+                    "Memory reader produced END SPLIT signal. " +
+                    "Split=" + settings.Split +
+                    ", EndSplit=" + settings.EndSplit +
+                    ", TimerPhase=" + state.CurrentPhase +
+                    ", CurrentSplitIndex=" + state.CurrentSplitIndex + ".");
+            }
+
             if (settings.Split && settings.EndSplit &&
-                state.CurrentPhase == TimerPhase.Running &&
-                memory.ConsumeEndSplitSignal())
+                state.CurrentPhase == TimerPhase.Running && endSignal)
             {
                 int previousSplitIndex = state.CurrentSplitIndex;
                 TimerPhase previousPhase = state.CurrentPhase;
+                SNAPTICDemoLog.Write("Calling TimerModel.Split() for End Split.");
                 timer.Split();
 
                 // TimerModel.Split is synchronous. Only arm the guard after
@@ -101,12 +138,24 @@ namespace LiveSplit.SNAPTICDemo
                 {
                     guardedAttemptCount = state.Run?.AttemptCount ?? -1;
                     guardedSplitIndex = state.CurrentSplitIndex;
+                    SNAPTICDemoLog.Write(
+                        "End Split confirmed by LiveSplit. New TimerPhase=" + state.CurrentPhase +
+                        ", CurrentSplitIndex=" + state.CurrentSplitIndex +
+                        ", AttemptCount=" + guardedAttemptCount + ".");
+                }
+                else
+                {
+                    SNAPTICDemoLog.Write(
+                        "WARNING: TimerModel.Split() returned without LiveSplit advancing. " +
+                        "TimerPhase=" + state.CurrentPhase +
+                        ", CurrentSplitIndex=" + state.CurrentSplitIndex + ". Will retry if contact remains active.");
                 }
             }
         }
 
         public override void Dispose()
         {
+            SNAPTICDemoLog.Write("Component disposed.");
             memory.Dispose();
             settings.Dispose();
         }
