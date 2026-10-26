@@ -7,8 +7,8 @@ Godot state directly from memory.
 
 1. Open Livesplit
 2. Right-Click Livesplit and Select **Edit Splits**
-3. Type "SNAPTIC Demo" into the Game Title
-4. Activate the Autosplitter when it pops up below with the correct game name.
+3. Type "SNAPTIC Demo" into the Game Name
+4. Press the "Activate" Button on the Autosplitter Row when it pops up below with the correct game name.
 
 ### Additionally if its not on Livepslit Autosplitters
 1. Copy `Components/LiveSplit.SNAPTICDemo.dll` into LiveSplit's `Components`
